@@ -76,7 +76,7 @@ class QueueSplitterHandler(BaseHandler):
     def add(self, trigger_arg_list):
         trigger_arg_list.append('virtual_table')
 
-    def prepare_batch(self, batch_info, dst_curs):
+    def prepare_batch(self, batch_info, src_curs, dst_curs):
         """Called on first event for this table in current batch."""
         self.rows = []
 

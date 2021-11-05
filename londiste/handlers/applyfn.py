@@ -18,7 +18,7 @@ class ApplyFuncHandler(BaseHandler):
     handler_name = 'applyfn'
     cur_tick = None
 
-    def prepare_batch(self, batch_info, dst_curs):
+    def prepare_batch(self, batch_info, src_curs, dst_curs):
         if batch_info is not None:
             self.cur_tick = batch_info['tick_id']
 

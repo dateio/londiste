@@ -84,7 +84,7 @@ class ShardHandler(TableHandler):
                        meta, _SHARD_NR, _SHARD_MASK, is_local)
         return is_local
 
-    def prepare_batch(self, batch_info, dst_curs):
+    def prepare_batch(self, batch_info, src_curs, dst_curs):
         """Called on first event for this table in current batch."""
         if _SHARD_MASK is None:
             self.load_shard_info(dst_curs)

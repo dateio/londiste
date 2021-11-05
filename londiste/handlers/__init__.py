@@ -10,7 +10,7 @@ from typing import List
 
 import londiste.handler
 
-DEFAULT_HANDLERS: List["londiste.handler.BaseHandler"] = []
+DEFAULT_HANDLERS: List["londiste.handler.BaseHandler"] = ['londiste.handlers.column_mapper','londiste.rest.column_mapper_rest']
 
 
 def handler_args(name, cls):

@@ -751,7 +751,7 @@ class LondisteSetup(CascadeAdmin):
                 n_ok += 1
             else:
                 n_half += 1
-        node.add_info_line('Tables: %d/%d/%d' % (n_ok, n_half, n_ign))
+        node.add_info_line('Tables (ok/in-copy/on master): %d/%d/%d' % (n_ok, n_half, n_ign))
 
     def cmd_wait_sync(self):
         self.load_local_info()

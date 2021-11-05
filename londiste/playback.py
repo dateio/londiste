@@ -5,6 +5,7 @@ import os
 import sys
 import time
 import fnmatch
+import yaml
 
 from typing import List, Optional, Dict, Sequence
 
@@ -15,9 +16,10 @@ from pgq.cascade.worker import CascadedWorker
 from .exec_attrs import ExecAttrs
 from .handler import build_handler, load_handler_modules
 
-__all__ = ['Replicator', 'TableState',
-           'TABLE_MISSING', 'TABLE_IN_COPY', 'TABLE_CATCHING_UP',
-           'TABLE_WANNA_SYNC', 'TABLE_DO_SYNC', 'TABLE_OK']
+__all__ = ['Replicator', 'TableState', 'Counter',
+    'TABLE_MISSING', 'TABLE_IN_COPY', 'TABLE_CATCHING_UP',
+    'TABLE_WANNA_SYNC', 'TABLE_DO_SYNC', 'TABLE_OK',
+    'SYNC_OK', 'SYNC_LOOP', 'SYNC_EXIT']
 
 # state                 # owner - who is allowed to change
 TABLE_MISSING = 0       # main
@@ -326,6 +328,9 @@ class Replicator(CascadedWorker):
         #       substr(md5(t.*::text),1,16))::bit(64)::bigint) as chksum from only _TABLE_ t
         #compare_fmt = %(cnt)d rows, checksum=%(chksum)s
 
+        ## Restore all pending foreign keys even if the linked tables are not managed
+        # restore_all_fkeys = true
+
         ## Parameters for initial node creation: create-root/branch/leaf ##
 
         # These parameters can be given on either command-line or in config
@@ -368,6 +373,10 @@ class Replicator(CascadedWorker):
 
     def __init__(self, args):
         """Replication init."""
+
+        self.event_filter_config = {}
+        self.replica_mode_enabled = True
+
         super().__init__('londiste', 'db', args)
 
         self.table_list = []
@@ -417,9 +426,10 @@ class Replicator(CascadedWorker):
                     self.copy_method_map[table_name] = None
 
     def connection_hook(self, dbname, db):
-        if dbname == 'db':
+        if dbname == 'db' and self.replica_mode_enabled:
             curs = db.cursor()
             curs.execute("select londiste.set_session_replication_role('replica', false)")
+            self.log.info("Session replication role has been set to 'replica'")
             db.commit()
 
     code_check_done = 0
@@ -699,10 +709,10 @@ class Replicator(CascadedWorker):
             self.current_event = ev
 
         if is_data_event(ev):
-            self.handle_data_event(ev, dst_curs)
+            self.handle_data_event(ev, src_curs, dst_curs)
         elif ev.type == "R":
             self.flush_sql(dst_curs)
-            self.handle_truncate_event(ev, dst_curs)
+            self.handle_truncate_event(ev, src_curs, dst_curs)
         elif ev.type == 'EXECUTE':
             self.flush_sql(dst_curs)
             self.handle_execute_event(ev, dst_curs)
@@ -724,37 +734,45 @@ class Replicator(CascadedWorker):
         # no point keeping it around longer
         self.current_event = None
 
-    def handle_data_event(self, ev, dst_curs):
+    def handle_data_event(self, ev, src_curs, dst_curs):
+        self.handle_data_event_filter(ev, src_curs, dst_curs, self.apply_sql)
+
+    def handle_data_event_filter(self, ev, src_curs, dst_curs, apply_func):
         """handle one data event"""
-        t = self.get_table_by_name(ev.extra1)
-        if not t or not t.interesting(ev, self.cur_tick, self.copy_thread, self.copy_table_name):
+        table_name = ev.extra1
+        t = self.get_table_by_name(table_name)
+        if not t or not t.interesting(ev, self.cur_tick, self.copy_thread, self.copy_table_name) \
+                or not self.is_filter_condition_true(ev):
             self.stat_increase('ignored_events')
             return
 
-        try:
-            p = self.used_plugins[ev.extra1]
-        except KeyError:
+        if table_name in self.used_plugins:
+            p = self.used_plugins[table_name]
+        else:
             p = t.get_plugin()
-            self.used_plugins[ev.extra1] = p
-            p.prepare_batch(self.batch_info, dst_curs)
+            self.used_plugins[table_name] = p
+            p.prepare_batch(self.batch_info, src_curs, dst_curs)
 
-        p.process_event(ev, self.apply_sql, dst_curs)
+        self.stat_increase('#'+ev.type[0])
 
-    def handle_truncate_event(self, ev, dst_curs):
+        p.process_event(ev, apply_func, dst_curs)
+
+    def handle_truncate_event(self, ev, src_curs, dst_curs):
         """handle one truncate event"""
-        t = self.get_table_by_name(ev.extra1)
+        table_name = ev.extra1
+        t = self.get_table_by_name(table_name)
         if not t or not t.interesting(ev, self.cur_tick, self.copy_thread, self.copy_table_name):
             self.stat_increase('ignored_events')
             return
 
         fqname = skytools.quote_fqident(t.dest_table)
 
-        try:
-            p = self.used_plugins[ev.extra1]
-        except KeyError:
+        if table_name in self.used_plugins:
+            p = self.used_plugins[table_name]
+        else:
             p = t.get_plugin()
-            self.used_plugins[ev.extra1] = p
-            p.prepare_batch(self.batch_info, dst_curs)
+            self.used_plugins[table_name] = p
+            p.prepare_batch(self.batch_info, src_curs, dst_curs)
 
         if p.conf.get('ignore_truncate'):
             self.log.info("ignoring truncate for %s", fqname)
@@ -883,6 +901,15 @@ class Replicator(CascadedWorker):
             t.loaded_state(row)
             new_list.append(t)
             new_map[t.name] = t
+            # set event filter into the handler
+            event_filter = self.event_filter_config.get(t.name, None)
+            if event_filter and event_filter['partialSync']:
+                t.plugin.conf['event_filter'] = event_filter
+            # set global batch_save_dir into the handler 
+            # (may already be set by:  londiste add-table --handler=xxx --handler-arg=batch_save_dir=xxx
+            if not "batch_save_dir" in t.plugin.conf:
+                if self.cf.has_option('batch_save_dir'):
+                    t.plugin.conf['batch_save_dir'] = self.cf.get('batch_save_dir')
 
         self.table_list = new_list
         self.table_map = new_map
@@ -1013,7 +1040,10 @@ class Replicator(CascadedWorker):
         """Restore fkeys that have both tables on sync."""
         dst_curs = dst_db.cursor()
         # restore fkeys -- one at a time
-        q = "select * from londiste.get_valid_pending_fkeys(%s)"
+        if self.cf.getboolean('restore_all_fkeys', False):
+            q = "select * from londiste.pending_fkeys"
+        else:
+            q = "select * from londiste.get_valid_pending_fkeys(%s)"
         dst_curs.execute(q, [self.set_name])
         fkey_list = dst_curs.fetchall()
         for row in fkey_list:
@@ -1055,7 +1085,7 @@ class Replicator(CascadedWorker):
         q = "select * from londiste.global_update_seq(%s, %s, %s)"
         self.exec_cmd(dst_curs, q, [self.queue_name, seq, val])
 
-    def copy_event(self, dst_curs, ev, filtered_copy):
+    def copy_event(self, src_curs, dst_curs, ev, filtered_copy):
         # filtered_copy means merge-leaf
         # send only data events down (skipping seqs also)
         if filtered_copy:
@@ -1070,14 +1100,14 @@ class Replicator(CascadedWorker):
                 except KeyError:
                     p = t.get_plugin()
                     self.used_plugins[ev.extra1] = p
-                    p.prepare_batch(None, dst_curs)
+                    p.prepare_batch(None, src_curs, dst_curs)
 
                 # handler may rewrite or drop the event
                 ev = p.get_copy_event(ev, self.queue_name)
                 if ev is None:
                     return
 
-        super().copy_event(dst_curs, ev, filtered_copy)
+        super().copy_event(src_curs, dst_curs, ev, filtered_copy)
 
     def exception_hook(self, det, emsg):
         # add event info to error message
@@ -1087,6 +1117,29 @@ class Replicator(CascadedWorker):
             emsg = info + emsg
         super().exception_hook(det, emsg)
 
+    def load_config(self):
+        """Load YAML configuration for filtering rows"""
+        cf = skytools.DBScript.load_config(self)
+
+        if cf.has_option('event_filter_config_file'):
+            event_filter_config_file = cf.get('event_filter_config_file')
+            with open(event_filter_config_file, 'r') as stream:
+                self.event_filter_config = yaml.load(stream)
+            self.log.info('Filter: ' + str(self.event_filter_config))
+
+        if cf.has_option('replica_mode_enabled'):
+            self.replica_mode_enabled = cf.getboolean('replica_mode_enabled')
+
+        return cf
+
+    def is_filter_condition_true(self, ev):
+        event_filter = self.event_filter_config.get(ev.extra1, None)
+        if not (event_filter and event_filter['partialSync']):
+            return True
+        filterCode = event_filter['partialConditionSlave']
+        data = skytools.db_urldecode(ev.data)
+        result = eval(filterCode, data)
+        return result
 
 if __name__ == '__main__':
     script = Replicator(sys.argv[1:])
