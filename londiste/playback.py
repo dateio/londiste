@@ -907,7 +907,7 @@ class Replicator(CascadedWorker):
                 t.plugin.conf['event_filter'] = event_filter
             # set global batch_save_dir into the handler 
             # (may already be set by:  londiste add-table --handler=xxx --handler-arg=batch_save_dir=xxx
-            if not "batch_save_dir" in t.plugin.conf:
+            if "batch_save_dir" not in t.plugin.conf or not t.plugin.conf['batch_save_dir']:
                 if self.cf.has_option('batch_save_dir'):
                     t.plugin.conf['batch_save_dir'] = self.cf.get('batch_save_dir')
 
