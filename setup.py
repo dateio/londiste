@@ -17,7 +17,7 @@ setup(
     version="3.8.2",
     maintainer="Marko Kreen",
     maintainer_email="markokr@gmail.com",
-    packages=["londiste", "londiste.handlers"],
+    packages=["londiste", "londiste.handlers", "londiste.rest"],
     install_requires=["pgq", "skytools"],
     entry_points={
         "console_scripts": [
