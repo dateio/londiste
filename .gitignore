@@ -23,9 +23,11 @@ tmp
 
 dist
 
-conf
-log
-pid
+images/test/tests/simple/batches
+images/test/tests/simple/conf
+images/test/tests/simple/log
+images/test/tests/simple/pid
+repos
 *.log
 *.pid
 .idea
