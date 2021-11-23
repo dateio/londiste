@@ -1,6 +1,6 @@
 #! /bin/bash
 
-. ../testlib.sh
+source ../testlib.sh
 
 v='-q'
 v=''

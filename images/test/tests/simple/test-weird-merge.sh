@@ -1,8 +1,10 @@
 #! /bin/bash
 
-. ../testlib.sh
+source ../testlib.sh
 
 ../zstop.sh
+
+source ./init.sh
 
 v='-q'
 v=''
@@ -37,7 +39,7 @@ conf_londiste() {
 [londiste]
 db = dbname=${xdb}
 queue_name = ${xqueue}
-logfile = log/%(job_name)s.log
+logfile = $LOG_DIR/%(job_name)s.log
 pidfile = pid/%(job_name)s.pid
 pgq_autocommit = 1
 pgq_lazy_fetch = 0

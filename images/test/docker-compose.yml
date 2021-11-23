@@ -1,0 +1,21 @@
+# =======================
+# Run tests on Londiste
+# ------------------------
+#  TODOs 
+# - put postgres into separate container?
+# - use volumes to make operational data easily accessible (handy for tests debugging)
+# - rewrite tests from pure shell to something more test-like
+
+version: "3.9"
+services:
+
+#  test_obfuscate:
+#    build: .
+#    command: ["./obfuscate/docker_run.sh"]
+
+  test_simple:
+    # image built using ./build_test_image.sh
+    image: londiste_test
+    volumes:
+      - ./tests:/code/tests
+    command: ["./simple/docker_run.sh"]

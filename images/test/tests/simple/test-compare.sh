@@ -1,14 +1,17 @@
 #! /bin/bash
 
-. ../testlib.sh
+# Does not work. Always freezes on calling: londiste conf/londiste_db4.ini compare --force
+
+source ../testlib.sh
 
 ../zstop.sh
+
+source ./init.sh
 
 v='-q'
 v=''
 nocheck=1
 
-db_list="db1 db2 db3 db4 db5"
 db_list="db1 db2 db3 db4 db5"
 
 kdb_list=`echo $db_list | sed 's/ /,/g'`
@@ -35,8 +38,9 @@ cat > conf/londiste_$db.ini <<EOF
 [londiste]
 db = dbname=$db
 queue_name = replika
-logfile = log/%(job_name)s.log
+logfile = $LOG_DIR/%(job_name)s.log
 pidfile = pid/%(job_name)s.pid
+batch_save_dir = $BATCH_SAVE_DIR
 
 pgq_autocommit = 1
 pgq_lazy_fetch = 0

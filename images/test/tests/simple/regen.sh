@@ -1,6 +1,6 @@
 #! /bin/bash
 
-. ../testlib.sh
+source ../testlib.sh
 
 ../zstop.sh
 
@@ -197,8 +197,8 @@ fi
 if true; then
 
 msg "Add column on root"
-run cat ddl.sql
-run londiste $v conf/londiste_db1.ini execute ddl.sql
+run cat regen_ddl.sql
+run londiste $v conf/londiste_db1.ini execute regen_ddl.sql
 msg "Insert data into new column"
 for n in 5 6 7 8; do
   run psql -d db1 -c "insert into mytable (data, data2) values ('row$n', 'data2')"

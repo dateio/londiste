@@ -1,0 +1,78 @@
+# Londiste - long configuration with unnecessary PostgreSQL installation
+
+FROM python:3.8-slim-buster
+
+WORKDIR /code
+ENV SRC_DATEIO="src-dateio"
+ENV SRC_GITHUB="src-github"
+ENV LONDISTE="londiste-3.8.1"
+ENV PGQ="pgq-3.5.1"
+ENV SKYTOOLS="skytools-3.7.3"
+
+RUN pip3 install 'psycopg2-binary==2.8.6' 'pyyaml==5.3.1' 'pgq==3.5' 'skytools==3.7.3' 'urllib3==1.26.7' 'requests==2.26.0' 'pyaml==21.8.3' 'poster3==0.8.1'
+
+# ==== customized poster3 ====
+COPY ${SRC_DATEIO}/poster3 /usr/local/lib/python3.8/site-packages/poster3
+RUN find /usr/local/lib/python3.8/site-packages/poster3 -name "*.pyc" -type f -delete
+
+# ==== postgres ====
+ENV DEBIAN_FRONTEND="noninteractive"
+ENV PG=14
+ENV PATH="/usr/lib/postgresql/${PG}/bin:${PATH}"
+
+
+RUN set -ex; \
+    apt="apt-get -qq -y --no-install-recommends"; \
+    ${apt} update -y; \
+    ${apt} install libc-dev wget gnupg2 lsb-release git make gcc supervisor mc nano htop iputils-ping curl tzdata; \
+    ${apt} dist-upgrade; \
+    wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -; \
+    echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main ${PG}" |  \
+    tee /etc/apt/sources.list.d/pgdg.list; \
+    ${apt} update; \
+    # disable new cluster creation
+    mkdir -p /etc/postgresql-common/createcluster.d; \
+    echo "create_main_cluster = false" | tee /etc/postgresql-common/createcluster.d/no-main.conf; \
+    ${apt} install postgresql-${PG} postgresql-server-dev-${PG} pgqd; \
+    apt-get clean;  \
+    rm -rf /var/lib/apt/lists/*;
+
+ENV PGHOST="/tmp"
+
+# ==== pgq ====
+RUN set -ex; \
+    git clone -q https://github.com/pgq/pgq;
+COPY ${SRC_DATEIO}/${PGQ}/. /usr/local/lib/python3.8/site-packages/pgq
+RUN find /usr/local/lib/python3.8/site-packages/pgq -name "*.pyc" -type f -delete
+RUN make -C pgq; bash -c "PATH='${PATH}' make install -C pgq";
+
+# ==== pgq-node =====
+RUN set -ex; \
+    git clone -q https://github.com/pgq/pgq-node; 
+RUN make -C pgq-node; bash -c "PATH='${PATH}' make install -C pgq-node";
+
+
+# ==== londiste-sql ====
+RUN set -ex; \
+    git clone -q https://github.com/pgq/londiste-sql;
+RUN make -C londiste-sql; bash -c "PATH='${PATH}' make install -C londiste-sql";
+
+# ==== londiste ====
+COPY ${SRC_GITHUB}/${LONDISTE} .
+COPY ${SRC_DATEIO}/${LONDISTE} ./londiste
+RUN pip3 install .
+
+# ==== pgq ====
+COPY ${SRC_DATEIO}/${PGQ}/. /usr/local/lib/python3.8/site-packages/pgq
+RUN find /usr/local/lib/python3.8/site-packages/pgq -name "*.pyc" -type f -delete
+
+# ==== skytools ====
+COPY ${SRC_DATEIO}/${SKYTOOLS}/. /usr/local/lib/python3.8/site-packages/skytools
+RUN find /usr/local/lib/python3.8/site-packages/skytools -name "*.pyc" -type f -delete
+
+
+# ==== permissions & configs ====
+RUN set -ex; \
+    chmod -R u+rwX,g-rwx,o-rwx ".";
+
+CMD ["/usr/bin/supervisord", "-n"]

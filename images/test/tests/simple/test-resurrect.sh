@@ -1,8 +1,10 @@
 #! /bin/bash
 
-. ../testlib.sh
+source ../testlib.sh
 
 ../zstop.sh
+
+source ./init.sh
 
 rm -f resurrect-lost-events.json
 
@@ -37,7 +39,7 @@ cat > conf/londiste_$db.ini <<EOF
 job_name = londiste_$db
 db = dbname=$db
 queue_name = replika
-logfile = log/%(job_name)s.log
+logfile = $LOG_DIR/%(job_name)s.log
 pidfile = pid/%(job_name)s.pid
 
 pgq_autocommit = 1
