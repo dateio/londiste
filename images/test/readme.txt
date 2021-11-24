@@ -2,6 +2,12 @@
 Docker environment for tests 
 =================================================
 
+Supported tests:
+- see tests/simple/_run_all.sh
+- other tests not ready yet
+
+----------------
+
 Run tests in the foreground:
 docker-compose up
 

@@ -1,3 +1,8 @@
+# ===============================================================================
+# Create working dir "repos" and clone all the needed git repositore in there.
+# - do not manually change anything in the directory
+#================================================================================
+
 mkdir -p repos
 
 cd repos
