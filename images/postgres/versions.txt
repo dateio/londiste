@@ -1,0 +1,5 @@
+
+PostgreSQL for Londiste 3.8
+
+24.11.2021
+v1 - first usable version of new Londiste 3.8

@@ -4,6 +4,10 @@ RUN apt-get update && apt-get install -y postgresql-10-repack wget lsb-release h
 
 WORKDIR /prepare
 
+COPY repos/pgq pgq
+COPY repos/pgq-node pgq-node
+COPY repos/londiste-sql londiste-sql
+
 # ==== postgres ====
 ENV PG=14
 RUN set -ex; \
@@ -12,23 +16,16 @@ RUN set -ex; \
     ${apt} update; \
     ${apt} install ${BUILD_DEPS}; \
     ${apt} dist-upgrade; \
-    git config --global http.sslverify false;
-
-# ==== pgq ====
-COPY repos/pgq pgq
-RUN  make -C pgq; bash -c "PATH='${PATH}' make install -C pgq";
-
-#  ==== pgq-node =====
-COPY repos/pgq-node pgq-node  
-RUN make -C pgq-node; bash -c "PATH='${PATH}' make install -C pgq-node";
-
-# ==== londiste-sql ====
-COPY repos/londiste-sql londiste-sql
-RUN make -C londiste-sql; bash -c "PATH='${PATH}' make install -C londiste-sql";
-
-#  ==== clean ====
-RUN apt-get purge -y --auto-remove ${BUILD_DEPS}; \
+    git config --global http.sslverify false; \
+    # ==== pgq ==== 
+    make -C pgq; bash -c "PATH='${PATH}' make install -C pgq"; \
+    #  ==== pgq-node =====
+    make -C pgq-node; bash -c "PATH='${PATH}' make install -C pgq-node"; \
+    # ==== londiste-sql ====
+    make -C londiste-sql; bash -c "PATH='${PATH}' make install -C londiste-sql"; \
+    apt-get purge -y --auto-remove ${BUILD_DEPS}; \
     apt-get clean; \
-    rm -rf /var/lib/apt/lists/*;
+    rm -rf /var/lib/apt/lists/*; \
+    rm -rf /prepare
 
 WORKDIR /
