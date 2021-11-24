@@ -1,0 +1,47 @@
+
+Londiste 3.8
+(image name = londiste-3.8)
+
+
+24.11.2021
+v1 - first usable version of new Londiste 3.8
+
+
+
+
+
+
+
+
+==============
+
+
+OLD Londiste 3.2
+(image name = londiste)
+
+
+
+v9
+https://dateio.atlassian.net/browse/SA-493  - pridan balik 'tzdata' kvuli nastaveni casu / pasma v kontejneru
+
+v8 (86a314880c60)
+https://trello.com/c/RyUCGuDH
+
+v7 (cc02987bfbc3)
+https://trello.com/c/B2nW9NnS
+
+v6 (7262eb6bd671)
+doplneni zbylych zmen na verzi londiste 3.2.6
+
+v5 (a154ea32ce9c)
+https://trello.com/c/2fiNwl8d - podpora filtrovani eventu v masteru
+https://trello.com/c/ULNRQ7h3 - lepsi log prazdneho eventu, moznost preskoceni eventy
+https://trello.com/c/HNdQLOFT - oprava truncate
+https://trello.com/c/kb7H3gEd - pridany nastroje ping
+
+v2 (f54c6c58e65b)
+Vypnuti kontroly SSL certifikatu v rest/rest.py.
+
+v1
+Pocatecni verze.
+

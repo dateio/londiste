@@ -25,7 +25,6 @@ RUN set -ex; \
 # ==== londiste ====
 COPY londiste londiste
 COPY etc etc
-COPY tests tests
 COPY ./* ./
 RUN pip3 install .
 
