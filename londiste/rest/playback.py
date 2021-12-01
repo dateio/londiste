@@ -121,7 +121,7 @@ class ReplicatorRest(Replicator):
         self.log.debug('Sync tables')
 
         while 1:
-            cnt = Counter(self.table_list)
+            cnt = Counter(self.table_list, self.copy_method_map)
             if self.copy_thread:
                 res = self.sync_from_copy_thread(cnt, src_db, dst_db)
             else:
