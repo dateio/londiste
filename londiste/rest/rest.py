@@ -1,11 +1,11 @@
 import logging
 import urllib
-import urllib3
+import urllib2
 import ssl
 from datetime import datetime
 
-from poster3.encode import multipart_encode
-from poster3.streaminghttp import register_openers, StreamingHTTPSHandler, StreamingHTTPSConnection
+from poster.encode import multipart_encode
+from poster.streaminghttp import register_openers, StreamingHTTPSHandler, StreamingHTTPSConnection
 
 __all__ = ['Rest']
 
@@ -40,8 +40,8 @@ class Rest:
                 url = self.rest_url + action
                 if params:
                     url = url + '?' + urllib.urlencode(params)
-                request = urllib3.Request(url, datagen, headers)
-                response = urllib3.urlopen(request)
+                request = urllib2.Request(url, datagen, headers)
+                response = urllib2.urlopen(request)
                 self.log.info('Sent data to %s, result: %s', self.rest_url, response.getcode())
 
 
@@ -57,5 +57,5 @@ class Rest:
                 return self.do_open(StreamingHTTPSConnection, req, context = self._context)
 
         handler = StreamingHTTPSHandlerNoVerify(context = ssl._create_unverified_context())
-        opener = urllib3.build_opener(handler)
-        urllib3.install_opener(opener)
+        opener = urllib2.build_opener(handler)
+        urllib2.install_opener(opener)
