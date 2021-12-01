@@ -1,6 +1,8 @@
 FROM postgres:14.0
 
-RUN apt-get update && apt-get install -y postgresql-10-repack wget lsb-release htop mc nano
+ENV PG=14
+
+RUN apt-get update && apt-get install -y postgresql-$PG-repack wget lsb-release htop mc nano
 
 WORKDIR /prepare
 
@@ -9,7 +11,6 @@ COPY repos/pgq-node pgq-node
 COPY repos/londiste-sql londiste-sql
 
 # ==== postgres ====
-ENV PG=14
 RUN set -ex; \
     apt="apt-get -qq -y --no-install-recommends"; \
     BUILD_DEPS="gnupg2 git make gcc postgresql-server-dev-${PG}"; \

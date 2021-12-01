@@ -1,5 +1,8 @@
 
 PostgreSQL for Londiste 3.8
 
+1.12.2021
+v2 - fixed repack version
+
 24.11.2021
 v1 - first usable version of new Londiste 3.8
