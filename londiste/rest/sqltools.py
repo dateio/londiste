@@ -78,7 +78,7 @@ def full_copy(tablename, src_curs, column_list = [], condition = None, write_hoo
 
     # default dst table and dst columns to source ones
     dst_tablename = tablename
-    dst_column_list = column_list[:]
+    dst_column_list = list(column_list)
 
     def build_qfields(cols):
         if cols:
