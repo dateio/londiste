@@ -3,7 +3,7 @@
 
 import os
 import logging
-from io import StringIO
+from io import BytesIO
 import skytools
 import tempfile
 
@@ -28,7 +28,7 @@ class CopyToFilePipe(object):
     def __init__(self, tablename = None, limit = 512*1024, write_hook = None, work_dir = None):
         self.tablename = tablename
         self.write_hook = write_hook
-        self.buf = StringIO()
+        self.buf = BytesIO()
         self.limit = limit
         self.total_rows = 0
         self.total_bytes = 0
@@ -41,10 +41,10 @@ class CopyToFilePipe(object):
             data = self.write_hook(self, data)
 
         self.total_bytes += len(data)
-        self.total_rows += data.count("\n")
+        self.total_rows += data.count(b"\n")
 
         if self.buf.tell() >= self.limit:
-            pos = data.find('\n')
+            pos = data.find(b'\n')
             if pos >= 0:
                 # split at newline
                 p1 = data[:pos + 1]

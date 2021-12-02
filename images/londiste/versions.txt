@@ -3,7 +3,9 @@ Londiste 3.8
 (image name = londiste-3.8)
 
 2.12.2021
-v2 - poster library replaced with requests-toolbelt
+v2
+- poster library replaced with requests-toolbelt
+- made rest slave work again
 
 24.11.2021
 v1 - first usable version of new Londiste 3.8
