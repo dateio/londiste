@@ -1124,7 +1124,7 @@ class Replicator(CascadedWorker):
         if cf.has_option('event_filter_config_file'):
             event_filter_config_file = cf.get('event_filter_config_file')
             with open(event_filter_config_file, 'r') as stream:
-                self.event_filter_config = yaml.load(stream)
+                self.event_filter_config = yaml.safe_load(stream)
             self.log.info('Filter: ' + str(self.event_filter_config))
 
         if cf.has_option('replica_mode_enabled'):

@@ -6,9 +6,11 @@ Londiste 3.8
 v2
 - poster library replaced with requests-toolbelt
 - made rest slave work again
+- yaml.safe_load() is used instead of yaml.load()
 
 24.11.2021
-v1 - first usable version of new Londiste 3.8
+v1
+- first usable version of new Londiste 3.8
 
 
 
