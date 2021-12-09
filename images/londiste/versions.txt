@@ -2,6 +2,11 @@
 Londiste 3.8
 (image name = londiste-3.8)
 
+6.12.2021
+v3
+- londiste3 alias
+- ls output colouring ans shortcuts
+
 2.12.2021
 v2
 - poster library replaced with requests-toolbelt
