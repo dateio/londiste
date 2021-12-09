@@ -2,19 +2,19 @@
 Londiste 3.8
 (image name = londiste-3.8)
 
-6.12.2021
-v3
+6.12.2021 - v4
+- fixed --set-tick feature
+
+6.12.2021 - v3
 - londiste3 alias
 - ls output colouring ans shortcuts
 
-2.12.2021
-v2
+2.12.2021 - v2
 - poster library replaced with requests-toolbelt
 - made rest slave work again
 - yaml.safe_load() is used instead of yaml.load()
 
-24.11.2021
-v1
+24.11.2021 - v1
 - first usable version of new Londiste 3.8
 
 
