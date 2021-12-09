@@ -32,6 +32,8 @@ RUN find /usr/local/lib/python3.8/site-packages/pgq -name "*.pyc" -type f -delet
 COPY ${REPOS}/python-skytools/skytools/. /usr/local/lib/python3.8/site-packages/skytools
 RUN find /usr/local/lib/python3.8/site-packages/skytools -name "*.pyc" -type f -delete
 
+COPY root/.bashrc /root/.bashrc
+
 WORKDIR /opt/londiste
 
 CMD ["/usr/bin/supervisord", "-n"]
