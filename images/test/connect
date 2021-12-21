@@ -1,1 +1,2 @@
-docker exec -it test_test_simple_1 bash
+# connect to londiste container as root
+docker exec -u 0 -it test_test_simple_1  bash
