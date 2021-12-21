@@ -118,6 +118,8 @@ class Londiste(skytools.DBScript):
                      help="change queue position according to destination")
         g.add_option("--reset", action="store_true",
                      help="reset queue position on destination side")
+        p.add_option("--set-tick", action = "store",
+                help = "set queue position in both provider subscription table and consumer (destination) node table")
         p.add_option_group(g)
 
         g = optparse.OptionGroup(p, "options for add")
