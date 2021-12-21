@@ -2,6 +2,11 @@
 Londiste 3.8
 (image name = londiste-3.8)
 
+21.12.2021 - v5
+- BE-4389
+- table (re)sync adheres to filter condition when truncating destination table
+- replica mode never used in table copy (e.g. resync)
+
 6.12.2021 - v4
 - fixed --set-tick feature
 
