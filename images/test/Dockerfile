@@ -5,7 +5,7 @@ FROM python:3.8-slim-buster
 
 WORKDIR /code
 
-RUN pip3 install 'psycopg2-binary==2.8.6' 'pyyaml==5.3.1' 'pgq==3.5' 'skytools==3.7.3' 'urllib3==1.26.7' 'requests==2.26.0' 'pyaml==21.8.3' 'poster3==0.8.1'
+RUN pip3 install 'psycopg2-binary==2.8.6' 'pyyaml==5.3.1' 'pgq==3.5' 'skytools==3.7.3' 'urllib3==1.26.7' 'requests==2.26.0' 'pyaml==21.8.3'  'requests-toolbelt==0.9.1'
 
 # ==== postgres ====
 ENV DEBIAN_FRONTEND="noninteractive"
@@ -40,10 +40,6 @@ RUN make -C pgq-node; bash -c "PATH='${PATH}' make install -C pgq-node";
 COPY repos/londiste-sql londiste-sql
 RUN make -C londiste-sql; bash -c "PATH='${PATH}' make install -C londiste-sql";
 
-# ==== customized poster3 ====
-COPY repos/python-poster3-fix /usr/local/lib/python3.8/site-packages/poster3
-RUN find /usr/local/lib/python3.8/site-packages/poster3 -name "*.pyc" -type f -delete
-
 # ==== londiste ====
 COPY londiste londiste
 COPY etc etc
@@ -73,4 +69,5 @@ RUN set -ex; \
     LANG=C initdb data; \
     sed -ri -e "s,^[# ]*(unix_socket_directories).*,\\1='/tmp'," data/postgresql.conf;
 
+#ENTRYPOINT ["tail", "-f", "/dev/null"]
 ENTRYPOINT ["tests/docker_run.sh"]
