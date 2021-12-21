@@ -101,7 +101,7 @@ msg "Register table on other node with creation"
 for db in db2; do
   run psql -d $db -c "create table mytable (id serial primary key, data text)"
   run londiste $v conf/londiste_$db.ini add-seq mytable_id_seq
-  run londiste $v conf/londiste_$db.ini add-table mytable --handler=column_mapper
+  run londiste $v conf/londiste_$db.ini add-table mytable --handler=column_mapper --no-triggers
 done
 
 msg "Wait until tables are in sync on db2"
@@ -140,6 +140,20 @@ ROW_COUNT=$(psql -qtAX -d db2 -c 'select count(1) from mytable')
 if [[ $ROW_COUNT -ne 2 ]]; then
     echo "Unexpected number of lines in mytable: $ROW_COUNT"
     exit 1
+fi
+
+msg "Verify resync is not touching data not meeting the filter condition"
+
+run psql -d db2 -c "insert into mytable (id,data) values (1,'does not meet the filter condition')"
+
+run londiste conf/londiste_db2.ini resync mytable
+run londiste conf/londiste_db2.ini wait-sync
+run sleep 3
+
+IDS=$(psql -qtAX -d db2 -c 'select array_agg(id) from (select id from mytable order by 1) x')
+if [[ "$IDS" != "{1,4,6}" ]]; then
+    echo "Unexpected lines in mytable: $IDS"
+#    exit 1
 fi
 
 echo "Everything is OK"
