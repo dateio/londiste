@@ -800,6 +800,10 @@ class Replicator(CascadedWorker):
         exec_attrs = ExecAttrs(urlenc=s_attrs)
         sql = ev.data
 
+        # get current replication role to restore it later
+        dst_curs.execute("show session_replication_role")
+        session_replication_role = dst_curs.fetchone()[0]
+
         # fixme: curs?
         dst_curs.execute("select londiste.set_session_replication_role('local', true)")
 
@@ -818,7 +822,7 @@ class Replicator(CascadedWorker):
         ret = res[0]['ret_code']
         if ret > 200:
             self.log.warning("Skipping execution of '%s'", fname)
-            dst_curs.execute("select londiste.set_session_replication_role('replica', true)")
+            dst_curs.execute("select londiste.set_session_replication_role(%s, true)",[session_replication_role])
             return
 
         if exec_attrs.need_execute(dst_curs, tbl_map, seq_map):
@@ -831,7 +835,7 @@ class Replicator(CascadedWorker):
 
         q = "select * from londiste.execute_finish(%s, %s)"
         self.exec_cmd(dst_curs, q, [self.queue_name, fname], commit=False)
-        dst_curs.execute("select londiste.set_session_replication_role('replica', true)")
+        dst_curs.execute("select londiste.set_session_replication_role(%s, true)",[session_replication_role])
 
     def apply_sql(self, sql, dst_curs):
 

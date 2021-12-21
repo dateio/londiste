@@ -45,6 +45,15 @@ class CopyTable(Replicator):
         self.copy_thread = 1
         self.main_worker = False
 
+    def connection_hook(self, dbname, db):
+        """ Override Replicator.connection_hook and ensure 'replica' role is used for table copy in any circustances. """
+
+        if dbname == 'db':
+            curs = db.cursor()
+            curs.execute("select londiste.set_session_replication_role('replica', false)")
+            self.log.info("Session replication role has been set to 'replica'")
+            db.commit()
+
     def get_copy_suffix(self, tblname):
         return ".copy.%s" % tblname
 
