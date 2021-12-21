@@ -15,4 +15,4 @@ cd simple
 #./test-fkey.sh
 
 # wait forever
-tail -f /dev/null
+#tail -f /dev/null
