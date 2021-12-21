@@ -151,12 +151,12 @@ class CopyTable(Replicator):
             objs = T_CONSTRAINT | T_INDEX | T_RULE | T_PARENT  # | T_TRIGGER
             dst_struct.drop(dst_curs, objs, log=self.log)
 
-            event_filter = tbl_stat.plugin.conf['event_filter']
+            event_filter = tbl_stat.plugin.conf.get('event_filter')
 
             # drop data
             if tbl_stat.table_attrs.get('skip_truncate'):
                 self.log.info("%s: skipping truncate", tbl_stat.name)
-            elif event_filter and event_filter['partialSync']:
+            elif event_filter and event_filter.get('partialSync'):
                 self.log.info("%s: partially deleting with condition %s", tbl_stat.name, event_filter['partialConditionMaster'])
                 q = "delete from "
                 q += skytools.quote_fqident(tbl_stat.dest_table)
