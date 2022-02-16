@@ -539,7 +539,7 @@ class Replicator(CascadedWorker):
     def sync_from_main_thread(self, cnt, src_db, dst_db):
         "Main thread sync logic."
 
-        # This operates on all table, any amount can be in any state
+        # This operates on all tables, any amount can be in any state
 
         ret = SYNC_OK
 
@@ -1004,6 +1004,9 @@ class Replicator(CascadedWorker):
 
         # launch and wait for daemonization result
         self.log.debug("Launch args: %r", cmd)
+        if os.name == 'nt':
+            self.log.warn("Copy process not implemented on Windows: %r", cmd)
+            return
         res = os.spawnvp(os.P_WAIT, main_exe, cmd)
         self.log.debug("Launch result: %r", res)
         if res != 0:
