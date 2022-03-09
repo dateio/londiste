@@ -11,6 +11,7 @@ from londiste.admin import LondisteSetup
 from londiste.compare import Comparator
 from londiste.playback import Replicator
 from londiste.repair import Repairer
+from londiste.rest.compare import ComparatorRest
 from londiste.table_copy import CopyTable
 from londiste.rest.playback import ReplicatorRest
 from londiste.rest.table_copy import CopyTableRest
@@ -57,6 +58,7 @@ cmd_handlers = (
     (('copy',), CopyTable),
     (('worker-rest',), ReplicatorRest),
     (('copy-rest',), CopyTableRest),
+    (('compare-rest',), ComparatorRest),
 )
 
 
