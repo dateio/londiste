@@ -5,7 +5,7 @@ FROM python:3.8-slim-buster
 
 WORKDIR /code
 
-RUN pip3 install 'psycopg2-binary==2.8.6' 'pyyaml==5.3.1' 'pgq==3.5' 'skytools==3.7.3' 'urllib3==1.26.7' 'requests==2.26.0' 'pyaml==21.8.3'  'requests-toolbelt==0.9.1'
+RUN pip3 install 'psycopg2-binary==2.8.6' 'pyyaml==5.3.1' 'urllib3==1.26.7' 'requests==2.26.0' 'pyaml==21.8.3'  'requests-toolbelt==0.9.1'
 
 # ==== postgres ====
 ENV DEBIAN_FRONTEND="noninteractive"
@@ -48,7 +48,7 @@ COPY ./* ./
 RUN pip3 install .
 
 # ==== python-pgq ====
-COPY repos/python-pgq /usr/local/lib/python3.8/site-packages/pgq
+COPY repos/python-pgq/pgq /usr/local/lib/python3.8/site-packages/pgq
 RUN find /usr/local/lib/python3.8/site-packages/pgq -name "*.pyc" -type f -delete
 
 # ==== skytools ====

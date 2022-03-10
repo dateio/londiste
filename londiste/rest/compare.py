@@ -1,4 +1,5 @@
 import json
+import os
 import tempfile
 
 import skytools
@@ -53,11 +54,12 @@ class ComparatorRest(Comparator):
         src_db.commit()
 
         with tempfile.NamedTemporaryFile(prefix='compare_' + dst_tbl + '_', suffix='.json', delete=False, mode='w+') as sql_file:
-            compareData = {'table': dst_tbl, 'countOnly': self.options.count_only, 'columns': cols, 'condition': dst_where}
+            compareData = {'table': dst_tbl, 'countOnly': bool(self.options.count_only), 'columns': cols, 'condition': dst_where}
             sql_file.write(json.dumps(compareData))
-            sql_file.flush()
+            sql_file.close()
             rest = Rest(self.cf)
             dst_row = rest.call_api('compare', sql_file.name)
+            os.remove(sql_file.name)
 
         dst_str = f % dst_row
         self.log.info("dstdb: %s", dst_str)
