@@ -1,6 +1,8 @@
 #! /bin/bash
 
 # Does not work. Always freezes on calling: londiste conf/londiste_db4.ini compare --force
+# The problem is in method Syncer.lock_table_branch - force_tick in paused provider doesn't correctly propagate to the consumer,
+# so it's stuck in infinite loop waiting for the tick
 
 source ../testlib.sh
 

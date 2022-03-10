@@ -294,20 +294,7 @@ class Syncer(skytools.DBScript):
         self.force_tick(setup_curs)
 
         # now wait
-        while True:
-            time.sleep(0.5)
-
-            q = "select * from pgq_node.get_node_info(%s)"
-            res = self.exec_cmd(dst_db, q, [self.queue_name])
-            last_tick = res[0]['worker_last_tick']
-            if last_tick > tick_id:
-                break
-
-            # limit lock time
-            if time.time() > lock_time + self.lock_timeout and not self.options.force:
-                self.log.error('Consumer lagging too much, exiting')
-                lock_db.rollback()
-                sys.exit(1)
+        self.wait_until_tick(dst_db, lock_db, lock_time, tick_id)
 
     def unlock_table_root(self, lock_db, setup_db):
         lock_db.commit()
@@ -324,12 +311,20 @@ class Syncer(skytools.DBScript):
         tick_id = self.force_tick(setup_curs, False)
 
         # now wait
+        # FIXME: doesn't work, force_tick in paused node doesn't propagate to its consumer, so the waiting never ends
+        self.wait_until_tick(dst_db, lock_db, lock_time, tick_id)
+
+    def get_last_tick(self, db):
+        q = "select * from pgq_node.get_node_info(%s)"
+        res = self.exec_cmd(db, q, [self.queue_name])
+        original_tick = res[0]['worker_last_tick']
+        return original_tick
+
+    def wait_until_tick(self, db, lock_db, lock_time, tick_id):
         while True:
             time.sleep(0.5)
 
-            q = "select * from pgq_node.get_node_info(%s)"
-            res = self.exec_cmd(dst_db, q, [self.queue_name])
-            last_tick = res[0]['worker_last_tick']
+            last_tick = self.get_last_tick(db)
             if last_tick > tick_id:
                 break
 
