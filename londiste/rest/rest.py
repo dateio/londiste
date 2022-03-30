@@ -38,7 +38,7 @@ class Rest:
                 self.log.info('Sent data to %s, result: %s', self.rest_url, response.status_code)
                 response.raise_for_status()
                 content_type = response.headers.get('Content-type')
-                if 'application/json' in content_type:
+                if content_type and 'application/json' in content_type:
                     return response.json()
                 else:
                     return response.text
