@@ -20,7 +20,7 @@ class ComparatorRest(Comparator):
         src_curs = src_db.cursor()
         dst_curs = dst_db.cursor()
 
-        dst_where = t2.plugin.get_copy_condition(src_curs, dst_curs)
+        dst_where = self.event_filter_config[src_tbl]['partialConditionMaster'] if self.event_filter_config else None
         src_where = dst_where
 
         self.log.info('Counting %s', dst_tbl)
@@ -37,7 +37,7 @@ class ComparatorRest(Comparator):
 
         q = self.cf.get('compare_sql', q)
         q = q.replace("_COLS_", cols)
-        src_q = q.replace('_TABLE_', skytools.quote_fqident(src_tbl))
+        src_q = q.replace('_TABLE_', skytools.quote_fqident(src_tbl) + ' _tbl')
         if src_where:
             src_q = src_q + " WHERE " + src_where
 

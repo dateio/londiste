@@ -6,6 +6,7 @@ Currently just does count(1) on both sides.
 import sys
 
 import skytools
+import yaml
 
 from londiste.syncer import Syncer
 
@@ -25,7 +26,7 @@ class Comparator(Syncer):
         src_curs = src_db.cursor()
         dst_curs = dst_db.cursor()
 
-        dst_where = t2.plugin.get_copy_condition(src_curs, dst_curs)
+        dst_where = self.event_filter_config[src_tbl]['partialConditionMaster'] if self.event_filter_config else None
         src_where = dst_where
 
         self.log.info('Counting %s', dst_tbl)
@@ -42,10 +43,10 @@ class Comparator(Syncer):
 
         q = self.cf.get('compare_sql', q)
         q = q.replace("_COLS_", cols)
-        src_q = q.replace('_TABLE_', skytools.quote_fqident(src_tbl))
+        src_q = q.replace('_TABLE_', skytools.quote_fqident(src_tbl) + ' _tbl')
         if src_where:
             src_q = src_q + " WHERE " + src_where
-        dst_q = q.replace('_TABLE_', skytools.quote_fqident(dst_tbl))
+        dst_q = q.replace('_TABLE_', skytools.quote_fqident(dst_tbl) + ' _tbl')
         if dst_where:
             dst_q = dst_q + " WHERE " + dst_where
 
@@ -113,6 +114,15 @@ class Comparator(Syncer):
         p = super().init_optparse(p)
         p.add_option("--count-only", action="store_true", help="just count rows, do not compare data")
         return p
+
+    def load_config(self):
+        cf = super().load_config()
+        if cf.has_option('event_filter_config_file'):
+            event_filter_config_file = cf.get('event_filter_config_file')
+            with open(event_filter_config_file, 'r') as stream:
+                self.event_filter_config = yaml.safe_load(stream)
+            self.log.info('Filter: ' + str(self.event_filter_config))
+        return cf
 
 
 if __name__ == '__main__':
