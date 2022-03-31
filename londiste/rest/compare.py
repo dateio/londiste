@@ -20,7 +20,7 @@ class ComparatorRest(Comparator):
         src_curs = src_db.cursor()
         dst_curs = dst_db.cursor()
 
-        dst_where = self.event_filter_config[src_tbl]['partialConditionMaster'] if self.event_filter_config else None
+        dst_where = self.get_table_filter_condition(src_tbl)
         src_where = dst_where
 
         self.log.info('Counting %s', dst_tbl)

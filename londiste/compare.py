@@ -17,6 +17,11 @@ class Comparator(Syncer):
     """Simple checker based on Syncer.
     When tables are in sync runs simple SQL query on them.
     """
+
+    def __init__(self, args):
+        self.event_filter_config = {}
+        super().__init__(args)
+
     def process_sync(self, t1, t2, src_db, dst_db):
         """Actual comparison."""
 
@@ -26,7 +31,7 @@ class Comparator(Syncer):
         src_curs = src_db.cursor()
         dst_curs = dst_db.cursor()
 
-        dst_where = self.event_filter_config[src_tbl]['partialConditionMaster'] if self.event_filter_config else None
+        dst_where = self.get_table_filter_condition(src_tbl)
         src_where = dst_where
 
         self.log.info('Counting %s', dst_tbl)
@@ -73,6 +78,9 @@ class Comparator(Syncer):
             self.log.warning("%s: Results do not match!", dst_tbl)
             return 1
         return 0
+
+    def get_table_filter_condition(self, src_tbl):
+        return self.event_filter_config.get(src_tbl, {}).get('partialConditionMaster', '')
 
     def calc_cols(self, src_curs, src_tbl, dst_curs, dst_tbl):
         cols1 = self.load_cols(src_curs, src_tbl)
