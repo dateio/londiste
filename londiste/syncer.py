@@ -32,6 +32,9 @@ class Syncer(skytools.DBScript):
 
     old_worker_paused = None
 
+    """Query that sets DB session parameter to fix output format of float numbers. Value 1 means that there is no rounding."""
+    set_extra_float_digits_query = "set extra_float_digits = 1;"
+
     def __init__(self, args):
         """Syncer init."""
         super().__init__('londiste', args)
