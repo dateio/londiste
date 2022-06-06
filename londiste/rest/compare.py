@@ -39,7 +39,9 @@ class ComparatorRest(Comparator):
         q = q.replace("_COLS_", cols)
         src_q = q.replace('_TABLE_', skytools.quote_fqident(src_tbl) + ' _tbl')
         if src_where:
-            src_q = self.set_extra_float_digits_query + src_q + " WHERE " + src_where
+            src_q = src_q + " WHERE " + src_where
+
+        src_q = self.set_extra_float_digits_query + src_q
 
         f = "%(cnt)d rows"
         if not self.options.count_only:
