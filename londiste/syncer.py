@@ -246,76 +246,71 @@ class Syncer(skytools.DBScript):
             self.log.warning("Table %s does not exist on subscriber side", dst_tbl)
             return
 
-        # lock table against changes
         try:
-            if self.provider_info['node_type'] == 'root':
-                self.lock_table_root(lock_db, setup_db, dst_db, src_tbl, dst_tbl)
-            else:
-                self.lock_table_branch(lock_db, setup_db, dst_db, src_tbl, dst_tbl)
+            # lock table against changes
+            try:
+                self.lock_table_and_sync(lock_db, setup_db, dst_db, src_tbl, dst_tbl)
 
-            # take snapshot on provider side
-            src_db.commit()
-            src_curs.execute("SELECT 1")
+                # take snapshot on provider side
+                src_db.commit()
+                src_curs.execute("SELECT 1")
 
-            # take snapshot on subscriber side
-            dst_db.commit()
-            dst_curs.execute("SELECT 1")
+                # take snapshot on subscriber side
+                dst_db.commit()
+                dst_curs.execute("SELECT 1")
+            finally:
+                self.unlock_table(lock_db, setup_db)
+
+            # do work
+            bad = self.process_sync(t1, t2, src_db, dst_db)
+            if bad:
+                self.bad_tables += 1
         finally:
-            # release lock
-            if self.provider_info['node_type'] == 'root':
-                self.unlock_table_root(lock_db, setup_db)
-            else:
-                self.unlock_table_branch(lock_db, setup_db)
-
-        # do work
-        bad = self.process_sync(t1, t2, src_db, dst_db)
-        if bad:
-            self.bad_tables += 1
-
+            self.finalize_sync(lock_db, setup_db, dst_db, src_tbl, dst_tbl)
         # done
         src_db.commit()
         dst_db.commit()
 
-    def lock_table_root(self, lock_db, setup_db, dst_db, src_tbl, dst_tbl):
+    def lock_table_and_sync(self, lock_db, setup_db, dst_db, src_tbl, dst_tbl):
+        if self.provider_info['node_type'] == 'root':
+            self.lock_table_root_and_sync(lock_db, setup_db, dst_db, src_tbl, dst_tbl)
+        else:
+            raise Exception('Only root node can be locked')
 
+    def unlock_table(self, lock_db, setup_db):
+        # release lock
+        if self.provider_info['node_type'] == 'root':
+            self.unlock_table_root(lock_db, setup_db)
+        else:
+            raise Exception('Only root node can be unlocked')
+
+    def lock_table_root_and_sync(self, lock_db, setup_db, dst_db, src_tbl, dst_tbl):
+
+        lock_time, tick_id = self.lock_table_root(dst_tbl, lock_db, setup_db, src_tbl)
+
+        # now wait
+        self.wait_until_tick(dst_db, lock_db, lock_time, tick_id)
+
+    def lock_table_root(self, dst_tbl, lock_db, setup_db, src_tbl):
         setup_curs = setup_db.cursor()
         lock_curs = lock_db.cursor()
-
         # lock table in separate connection
         self.log.info('Locking %s', src_tbl)
         lock_db.commit()
         self.set_lock_timeout(lock_curs)
         lock_time = time.time()
         lock_curs.execute("LOCK TABLE %s IN SHARE MODE" % skytools.quote_fqident(src_tbl))
-
         # now wait until consumer has updated target table until locking
         self.log.info('Syncing %s', dst_tbl)
-
         # consumer must get further than this tick
         tick_id = self.force_tick(setup_curs)
         # try to force second tick also
-        self.force_tick(setup_curs)
-
-        # now wait
-        self.wait_until_tick(dst_db, lock_db, lock_time, tick_id)
+        tick_id = self.force_tick(setup_curs)
+        return lock_time, tick_id
 
     def unlock_table_root(self, lock_db, setup_db):
         lock_db.commit()
 
-    def lock_table_branch(self, lock_db, setup_db, dst_db, src_tbl, dst_tbl):
-        setup_curs = setup_db.cursor()
-
-        lock_time = time.time()
-        self.old_worker_paused = self.pause_consumer(setup_curs, self.provider_info['worker_name'])
-
-        self.log.info('Syncing %s', dst_tbl)
-
-        # consumer must get further than this tick
-        tick_id = self.force_tick(setup_curs, False)
-
-        # now wait
-        # FIXME: doesn't work, force_tick in paused node doesn't propagate to its consumer, so the waiting never ends
-        self.wait_until_tick(dst_db, lock_db, lock_time, tick_id)
 
     def get_last_tick(self, db):
         q = "select * from pgq_node.get_node_info(%s)"
@@ -324,25 +319,20 @@ class Syncer(skytools.DBScript):
         return original_tick
 
     def wait_until_tick(self, db, lock_db, lock_time, tick_id):
+        self.log.info("Waiting for tick %d...", tick_id)
         while True:
             time.sleep(0.5)
 
             last_tick = self.get_last_tick(db)
-            if last_tick > tick_id:
+            if last_tick >= tick_id:
                 break
+            self.log.debug("Waiting for tick %d, last tick: %d", tick_id, last_tick)
 
             # limit lock time
             if time.time() > lock_time + self.lock_timeout and not self.options.force:
-                self.log.error('Consumer lagging too much, exiting')
+                self.log.error('Consumer lagging too much, exiting (use the --force to wait)')
                 lock_db.rollback()
                 sys.exit(1)
-
-    def unlock_table_branch(self, lock_db, setup_db):
-        # keep worker paused if it was so before
-        if self.old_worker_paused:
-            return
-        setup_curs = setup_db.cursor()
-        self.resume_consumer(setup_curs, self.provider_info['worker_name'])
 
     def process_sync(self, t1, t2, src_db, dst_db):
         """It gets 2 connections in state where tbl should be in same state.
@@ -353,6 +343,9 @@ class Syncer(skytools.DBScript):
         q = "select * from pgq_node.get_node_info(%s)"
         rows = self.exec_cmd(dst_db, q, [self.queue_name])
         return (rows[0]['provider_node'], rows[0]['provider_location'])
+
+    def finalize_sync(self, lock_db, setup_db, dst_db, src_tbl, dst_tbl):
+        pass
 
     def pause_consumer(self, curs, cons_name):
         self.log.info("Pausing upstream worker: %s", cons_name)

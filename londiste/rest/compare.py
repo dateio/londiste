@@ -1,6 +1,7 @@
 import json
 import os
 import tempfile
+import time
 
 import skytools
 
@@ -70,3 +71,25 @@ class ComparatorRest(Comparator):
             return 1
         self.log.info("%s: OK", dst_tbl)
         return 0
+
+    def lock_table_root_and_sync(self, lock_db, setup_db, dst_db, src_tbl, dst_tbl):
+        lock_time, tick_id = self.lock_table_root(dst_tbl, lock_db, setup_db, src_tbl)
+        dst_curs = dst_db.cursor()
+        self.pause_consumer_after_tick(dst_curs, tick_id)
+
+        # now wait
+        self.wait_until_tick(dst_db, lock_db, lock_time, tick_id)
+
+    def pause_consumer_after_tick(self, curs, tick_id):
+        self.log.info("Pausing consumer after tick %s", tick_id)
+        q = "select * from pgq_node.set_node_attrs(%s, %s)"
+        self.exec_cmd(curs, q, [self.queue_name, "wait-after=%s" % tick_id])
+
+    def unpause_consumer_after_tick(self, curs):
+        q = "select * from pgq_node.set_node_attrs(%s, %s)"
+        self.exec_cmd(curs, q, [self.queue_name, None])
+
+
+    def finalize_sync(self, lock_db, setup_db, dst_db, src_tbl, dst_tbl):
+        self.unpause_consumer_after_tick(dst_db.cursor())
+        dst_db.commit()
