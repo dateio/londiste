@@ -2,9 +2,12 @@
 Manages deny triggers on leaf node. It adds or remove deny triggers from all subscribed tables - configuration is
 node wide. Filter conditions are applied.
 """
+import logging
 
 
 class DenyTriggerManager:
+
+    log = logging.getLogger('DenyTriggerManager')
 
     drop_crud_triggers_query = """
             drop trigger if exists "_londiste_{0}" on {1};
@@ -36,12 +39,14 @@ class DenyTriggerManager:
          Create deny filters for subscribed tables.    
     """
     def create_deny_trigger_for_table(self, table_name):
+        self.log.debug("Creating triggers for table {0}".format(table_name))
         dst_db = self.dst_db
         dst_curs = dst_db.cursor()
 
         event_filter = self.event_filter_config.get(table_name, None)
         if event_filter and event_filter['partialSync']:
             # partial sync is enabled for a table, we have to apply filter
+            self.log.debug("Partial sync enabled for {0}".format(table_name))
 
             # we have to take condition for master, because for slave it is in Python format. Condition should have
             # same result on master and on slave
@@ -67,6 +72,8 @@ class DenyTriggerManager:
             dst_curs.execute(q)
         else:
             # partial sync is disabled for a table, just disable edit on all rows
+            self.log.debug("Partial sync disabled for {0}".format(table_name))
+
             q = (self.drop_crud_triggers_query + """
                 create trigger "_londiste_{0}"
                     after insert or update or delete

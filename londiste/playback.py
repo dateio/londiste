@@ -411,6 +411,7 @@ class Replicator(CascadedWorker):
         self.register_skip_seqs = self.cf.getlist("register_skip_seqs", [])
 
         if self.deny_triggers_automatic_management:
+            self.log.info("Deny triggers automatic management enabled")
             self.deny_trigger_manager = DenyTriggerManager(self.get_database('db'), self.event_filter_config,
                                                            self.queue_name)
 
