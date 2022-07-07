@@ -7,13 +7,13 @@ node wide. Filter conditions are applied.
 class DenyTriggerManager:
 
     drop_crud_triggers_query = """
-            drop trigger if exists _londiste_{0} on {1};
-            drop trigger if exists _londiste_{0}_before on {1};
-            drop trigger if exists _londiste_{0}_after on {1};
+            drop trigger if exists "_londiste_{0}" on {1};
+            drop trigger if exists "_londiste_{0}_before" on {1};
+            drop trigger if exists "_londiste_{0}_after" on {1};
         """
 
     drop_truncate_trigger_query = """
-            drop trigger if exists _londiste_{0}_truncate on {1};
+            drop trigger if exists "_londiste_{0}_truncate" on {1};
         """
 
     event_filter_config = {}
@@ -50,14 +50,14 @@ class DenyTriggerManager:
             filter_condition_new = filter_condition.replace('_tbl', 'new')
 
             q = (self.drop_crud_triggers_query + """
-                create trigger _londiste_{0}_before
+                create trigger "_londiste_{0}_before"
                     after delete or update
                     on {1}
                     for each row
                     when ({2})
                 execute procedure pgq.logutriga('{0}', 'deny');
 
-                create trigger _londiste_{0}_after
+                create trigger "_londiste_{0}_after"
                     after insert or update
                     on {1}
                     for each row
@@ -68,7 +68,7 @@ class DenyTriggerManager:
         else:
             # partial sync is disabled for a table, just disable edit on all rows
             q = (self.drop_crud_triggers_query + """
-                create trigger _londiste_{0}
+                create trigger "_londiste_{0}"
                     after insert or update or delete
                     on {1}
                     for each row
@@ -78,7 +78,7 @@ class DenyTriggerManager:
 
         # truncate is always disabled on a table
         q = (self.drop_truncate_trigger_query + """			
-                create trigger _londiste_{0}_truncate
+                create trigger "_londiste_{0}_truncate"
                 after truncate
                 on {1}
                 execute procedure pgq.sqltriga('{0}', 'deny');
