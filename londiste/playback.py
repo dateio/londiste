@@ -16,6 +16,8 @@ from pgq.cascade.worker import CascadedWorker
 from .exec_attrs import ExecAttrs
 from .handler import build_handler, load_handler_modules
 
+from londiste.deny_trigger_manager import DenyTriggerManager
+
 __all__ = ['Replicator', 'TableState', 'Counter',
     'TABLE_MISSING', 'TABLE_IN_COPY', 'TABLE_CATCHING_UP',
     'TABLE_WANNA_SYNC', 'TABLE_DO_SYNC', 'TABLE_OK',
@@ -371,11 +373,18 @@ class Replicator(CascadedWorker):
     register_skip_tables: Optional[Sequence[str]] = None
     register_skip_seqs: Optional[Sequence[str]] = None
 
+    deny_trigger_manager = None
+
     def __init__(self, args):
         """Replication init."""
 
         self.event_filter_config = {}
         self.replica_mode_enabled = True
+        # whether deny filters should be managed automatically
+        self.deny_triggers_automatic_management = False
+        # creates deny filter if True, drops all deny filters if False
+        # relevant only when deny_triggers_automatic_management = True
+        self.create_deny_triggers = True
 
         super().__init__('londiste', 'db', args)
 
@@ -400,6 +409,15 @@ class Replicator(CascadedWorker):
         self.register_only_seqs = self.cf.getlist("register_only_seqs", [])
         self.register_skip_tables = self.cf.getlist("register_skip_tables", [])
         self.register_skip_seqs = self.cf.getlist("register_skip_seqs", [])
+
+        if self.deny_triggers_automatic_management:
+            self.deny_trigger_manager = DenyTriggerManager(self.get_database('db'), self.event_filter_config,
+                                                           self.queue_name)
+
+            if self.create_deny_triggers:
+                self.deny_trigger_manager.create_deny_triggers()
+            else:
+                self.deny_trigger_manager.drop_deny_triggers()
 
     def reload(self):
         super().reload()
@@ -1136,6 +1154,12 @@ class Replicator(CascadedWorker):
 
         if cf.has_option('replica_mode_enabled'):
             self.replica_mode_enabled = cf.getboolean('replica_mode_enabled')
+
+        if cf.has_option('deny_triggers_automatic_management'):
+            self.deny_triggers_automatic_management = cf.getboolean('deny_triggers_automatic_management')
+
+        if self.deny_triggers_automatic_management and cf.has_option('create_deny_triggers'):
+            self.create_deny_triggers = cf.getboolean('create_deny_triggers')
 
         return cf
 
