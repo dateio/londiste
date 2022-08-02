@@ -29,24 +29,27 @@ class DenyTriggerManager:
         self.dst_db = dst_db
 
     def create_deny_triggers(self):
-        table_names = self.get_destination_tables()
-        for table_name in table_names:
-            self.create_deny_trigger_for_table(table_name)
+        table_infos = self.get_destination_table_infos()
+        for table_info in table_infos:
+            self.create_deny_trigger_for_table(table_info)
 
         return
 
     """
          Create deny filters for subscribed tables.    
     """
-    def create_deny_trigger_for_table(self, table_name):
-        self.log.debug("Creating triggers for table {0}".format(table_name))
+    def create_deny_trigger_for_table(self, table_info):
+        source_table = table_info['table_name']
+        dest_table = table_info['dest_table']
+
+        self.log.debug("Creating triggers for table {0}".format(source_table))
         dst_db = self.dst_db
         dst_curs = dst_db.cursor()
 
-        event_filter = self.event_filter_config.get(table_name, None)
+        event_filter = self.event_filter_config.get(source_table, None)
         if event_filter and event_filter['partialSync']:
             # partial sync is enabled for a table, we have to apply filter
-            self.log.debug("Partial sync enabled for {0}".format(table_name))
+            self.log.debug("Partial sync enabled for {0}".format(source_table))
 
             # we have to take condition for master, because for slave it is in Python format. Condition should have
             # same result on master and on slave
@@ -68,11 +71,11 @@ class DenyTriggerManager:
                     for each row
                     when ({3})
                 execute procedure pgq.logutriga('{0}', 'deny');
-                """).format(self.queue_name, table_name, filter_condition_old, filter_condition_new)
+                """).format(self.queue_name, dest_table, filter_condition_old, filter_condition_new)
             dst_curs.execute(q)
         else:
             # partial sync is disabled for a table, just disable edit on all rows
-            self.log.debug("Partial sync disabled for {0}".format(table_name))
+            self.log.debug("Partial sync disabled for {0}".format(dest_table))
 
             q = (self.drop_crud_triggers_query + """
                 create trigger "_londiste_{0}"
@@ -80,7 +83,7 @@ class DenyTriggerManager:
                     on {1}
                     for each row
                 execute procedure pgq.logutriga('{0}', 'deny');
-                """).format(self.queue_name, table_name)
+                """).format(self.queue_name, dest_table)
             dst_curs.execute(q)
 
         # truncate is always disabled on a table
@@ -89,7 +92,7 @@ class DenyTriggerManager:
                 after truncate
                 on {1}
                 execute procedure pgq.sqltriga('{0}', 'deny');
-        """).format(self.queue_name, table_name)
+        """).format(self.queue_name, dest_table)
         dst_curs.execute(q)
 
         return
@@ -98,26 +101,23 @@ class DenyTriggerManager:
         Drop all deny filters for subscribed tables.
     """
     def drop_deny_triggers(self):
-        table_names = self.get_destination_tables()
-        for table_name in table_names:
+        table_infos = self.get_destination_table_infos()
+        for table_info in table_infos:
             dst_db = self.dst_db
             dst_curs = dst_db.cursor()
-            q = (self.drop_crud_triggers_query + self.drop_truncate_trigger_query).format(self.queue_name, table_name)
+            q = (self.drop_crud_triggers_query + self.drop_truncate_trigger_query).format(self.queue_name, table_info['dest_name'])
             dst_curs.execute(q)
 
         return
 
-    def get_destination_tables(self):
+    def get_destination_table_infos(self):
         dst_db = self.dst_db
         dst_curs = dst_db.cursor()
 
-        q = "select * from londiste.get_table_list(%s)"
+        q = """select table_name, 
+                    coalesce(dest_table, table_name) as dest_table 
+                from londiste.get_table_list(%s) 
+                where local = true"""
         dst_curs.execute(q, [self.queue_name])
 
-        table_names = []
-        for row in dst_curs.fetchall():
-            if not row['local']:
-                continue
-            table_names.append(row['table_name'])
-
-        return table_names
+        return dst_curs.fetchall()
