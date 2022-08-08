@@ -1,5 +1,5 @@
 """
-Manages deny triggers on leaf node. It adds or remove deny triggers from all subscribed tables - configuration is
+Manages deny triggers on leaf node. It adds or removes deny triggers from all subscribed tables - configuration is
 node wide. Filter conditions are applied.
 """
 import logging
@@ -52,7 +52,7 @@ class DenyTriggerManager:
             self.log.debug("Partial sync enabled for {0}".format(source_table))
 
             # we have to take condition for master, because for slave it is in Python format. Condition should have
-            # same result on master and on slave
+            # the same result on master and on slave
             filter_condition = event_filter['partialConditionMaster']
             filter_condition_old = filter_condition.replace('_tbl', 'old')
             filter_condition_new = filter_condition.replace('_tbl', 'new')
