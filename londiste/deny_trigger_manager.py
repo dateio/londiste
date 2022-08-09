@@ -42,14 +42,14 @@ class DenyTriggerManager:
         source_table = table_info['table_name']
         dest_table = table_info['dest_table']
 
-        self.log.debug("Creating triggers for table {0}".format(source_table))
+        self.log.debug("Creating triggers for table %s", source_table)
         dst_db = self.dst_db
         dst_curs = dst_db.cursor()
 
         event_filter = self.event_filter_config.get(source_table, None)
         if event_filter and event_filter['partialSync']:
             # partial sync is enabled for a table, we have to apply filter
-            self.log.debug("Partial sync enabled for {0}".format(source_table))
+            self.log.debug("Partial sync enabled for %s", source_table)
 
             # we have to take condition for master, because for slave it is in Python format. Condition should have
             # the same result on master and on slave
@@ -57,6 +57,12 @@ class DenyTriggerManager:
             filter_condition_old = filter_condition.replace('_tbl', 'old')
             filter_condition_new = filter_condition.replace('_tbl', 'new')
 
+            # delete have to be verified before it happens, to still have record in table and record can be found by
+            # partial sync query
+            # update have to be verified before it happens - to prevent change from protected record->not protected
+            # record and also after it happens to prevent change in opposite direction
+            # insert, update have to be verified after it happens, so the record is in table and can be found by partial
+            # sync query
             q = (self.drop_crud_triggers_query + """
                 create trigger "_londiste_{0}_before"
                     after delete or update
@@ -75,7 +81,7 @@ class DenyTriggerManager:
             dst_curs.execute(q)
         else:
             # partial sync is disabled for a table, just disable edit on all rows
-            self.log.debug("Partial sync disabled for {0}".format(dest_table))
+            self.log.debug("Partial sync disabled for %s", dest_table)
 
             q = (self.drop_crud_triggers_query + """
                 create trigger "_londiste_{0}"
