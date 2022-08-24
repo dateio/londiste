@@ -56,34 +56,6 @@ class ComparatorRest(Comparator):
         self.log.info("%s: OK", dst_tbl)
         return 0
 
-    def get_compare_query(self, tbl, common_cols):
-        # get sane query
-        if self.options.count_only:
-            q = "select count(1) as cnt from only _TABLE_"
-        else:
-            # this way is much faster than the above
-            q = "select count(1) as cnt, sum(hashtext(_COLS_::text)::bigint) as chksum from only _TABLE_"
-
-        q = self.cf.get('compare_sql', q)
-        q = q.replace("_COLS_", common_cols)
-
-        # replace TABLE placeholder with real table name
-        compare_query = q.replace('_TABLE_', skytools.quote_fqident(tbl) + ' _tbl')
-
-        filter_cond = self.get_table_filter_condition(tbl)
-        if filter_cond:
-            # add filter condition to the query
-            if "where" in compare_query.lower():
-                # where condition already defined, use "and" to append filter condition
-                compare_query = compare_query + " and " + filter_cond
-            else:
-                compare_query = compare_query + " where " + filter_cond
-
-        # set extra float digits to have same floating point number precision on both DBs
-        compare_query = self.set_extra_float_digits_query + compare_query
-
-        return compare_query
-
     def lock_table_root_and_sync(self, lock_db, setup_db, dst_db, src_tbl, dst_tbl):
         lock_time, tick_id = self.lock_table_root(dst_tbl, lock_db, setup_db, src_tbl)
         dst_curs = dst_db.cursor()
