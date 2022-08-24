@@ -31,32 +31,12 @@ class Comparator(Syncer):
         src_curs = src_db.cursor()
         dst_curs = dst_db.cursor()
 
-        dst_where = self.get_table_filter_condition(src_tbl)
-        src_where = dst_where
-
         self.log.info('Counting %s', dst_tbl)
 
         # get common cols
-        cols = self.calc_cols(src_curs, src_tbl, dst_curs, dst_tbl)
-
-        # get sane query
-        if self.options.count_only:
-            q = "select count(1) as cnt from only _TABLE_"
-        else:
-            # this way is much faster than the above
-            q = "select count(1) as cnt, sum(hashtext(_COLS_::text)::bigint) as chksum from only _TABLE_"
-
-        q = self.cf.get('compare_sql', q)
-        q = q.replace("_COLS_", cols)
-        src_q = q.replace('_TABLE_', skytools.quote_fqident(src_tbl) + ' _tbl')
-        if src_where:
-            src_q = src_q + " WHERE " + src_where
-        dst_q = q.replace('_TABLE_', skytools.quote_fqident(dst_tbl) + ' _tbl')
-        if dst_where:
-            dst_q = dst_q + " WHERE " + dst_where
-
-        src_q = self.set_extra_float_digits_query + src_q
-        dst_q = self.set_extra_float_digits_query + dst_q
+        common_cols = self.calc_cols(src_curs, src_tbl, dst_curs, dst_tbl)
+        src_q = self.get_compare_query(src_tbl, common_cols)
+        dst_q = self.get_compare_query(dst_tbl, common_cols)
 
         f = "%(cnt)d rows"
         if not self.options.count_only:
@@ -81,6 +61,34 @@ class Comparator(Syncer):
             self.log.warning("%s: Results do not match!", dst_tbl)
             return 1
         return 0
+
+    def get_compare_query(self, tbl, common_cols):
+        # get sane query
+        if self.options.count_only:
+            q = "select count(1) as cnt from only _TABLE_"
+        else:
+            # this way is much faster than the above
+            q = "select count(1) as cnt, sum(hashtext(_COLS_::text)::bigint) as chksum from only _TABLE_"
+
+        q = self.cf.get('compare_sql', q)
+        q = q.replace("_COLS_", common_cols)
+
+        # replace TABLE placeholder with real table name
+        compare_query = q.replace('_TABLE_', skytools.quote_fqident(tbl) + ' _tbl')
+
+        filter_cond = self.get_table_filter_condition(tbl)
+        if filter_cond:
+            # add filter condition to the query
+            if "where" in compare_query.lower():
+                # where condition already defined, use "and" to append filter condition
+                compare_query = compare_query + " and " + filter_cond
+            else:
+                compare_query = compare_query + " where " + filter_cond
+
+        # set extra float digits to have same floating point number precision on both DBs
+        compare_query = self.set_extra_float_digits_query + compare_query
+
+        return compare_query
 
     def get_table_filter_condition(self, src_tbl):
         return self.event_filter_config.get(src_tbl, {}).get('partialConditionMaster', '')
