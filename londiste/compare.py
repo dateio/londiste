@@ -35,8 +35,11 @@ class Comparator(Syncer):
 
         # get common cols
         common_cols = self.calc_cols(src_curs, src_tbl, dst_curs, dst_tbl)
-        src_q = self.get_compare_query(src_tbl, common_cols)
-        dst_q = self.get_compare_query(dst_tbl, common_cols)
+        # get filter condition - always take condition from source table
+        filter_condition = self.get_table_filter_condition(src_tbl)
+
+        src_q = self.get_compare_query(src_tbl, filter_condition, common_cols)
+        dst_q = self.get_compare_query(dst_tbl, filter_condition, common_cols)
 
         f = "%(cnt)d rows"
         if not self.options.count_only:
@@ -62,7 +65,7 @@ class Comparator(Syncer):
             return 1
         return 0
 
-    def get_compare_query(self, tbl, common_cols):
+    def get_compare_query(self, tbl, filter_cond, common_cols):
         # get sane query
         if self.options.count_only:
             q = "select count(1) as cnt from only _TABLE_"
@@ -76,7 +79,6 @@ class Comparator(Syncer):
         # replace TABLE placeholder with real table name
         compare_query = q.replace('_TABLE_', skytools.quote_fqident(tbl) + ' _tbl')
 
-        filter_cond = self.get_table_filter_condition(tbl)
         if filter_cond:
             # add filter condition to the query
             if "where" in compare_query.lower():

@@ -25,7 +25,10 @@ class ComparatorRest(Comparator):
 
         # get common cols
         common_cols = self.calc_cols(src_curs, src_tbl, dst_curs, dst_tbl)
-        src_q = self.get_compare_query(src_tbl, common_cols)
+        # get filter condition
+        filter_condition = self.get_table_filter_condition(src_tbl)
+
+        src_q = self.get_compare_query(src_tbl, filter_condition, common_cols)
 
         f = "%(cnt)d rows"
         if not self.options.count_only:
@@ -40,8 +43,7 @@ class ComparatorRest(Comparator):
         src_db.commit()
 
         with tempfile.NamedTemporaryFile(prefix='compare_' + dst_tbl + '_', suffix='.json', delete=False, mode='w+') as sql_file:
-            dst_where = self.get_table_filter_condition(src_tbl)
-            compareData = {'table': dst_tbl, 'countOnly': bool(self.options.count_only), 'columns': common_cols, 'condition': dst_where}
+            compareData = {'table': dst_tbl, 'countOnly': bool(self.options.count_only), 'columns': common_cols, 'condition': filter_condition}
             sql_file.write(json.dumps(compareData))
             sql_file.close()
             rest = Rest(self.cf)
