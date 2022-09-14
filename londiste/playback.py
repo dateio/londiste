@@ -382,9 +382,9 @@ class Replicator(CascadedWorker):
         self.replica_mode_enabled = True
         # whether deny filters should be managed automatically
         self.deny_triggers_automatic_management = False
-        # creates deny filter if True, drops all deny filters if False
+        # if true, triggers are not recreated, the current state of triggers is saved in database, useful for initial run.
         # relevant only when deny_triggers_automatic_management = True
-        self.create_deny_triggers = True
+        self.deny_triggers_only_mark_state = False
 
         super().__init__('londiste', 'db', args)
 
@@ -415,10 +415,7 @@ class Replicator(CascadedWorker):
             self.deny_trigger_manager = DenyTriggerManager(self.get_database('db'), self.event_filter_config,
                                                            self.queue_name)
 
-            if self.create_deny_triggers:
-                self.deny_trigger_manager.create_deny_triggers()
-            else:
-                self.deny_trigger_manager.drop_deny_triggers()
+            self.deny_trigger_manager.create_missing_deny_triggers(self.deny_triggers_only_mark_state)
 
     def reload(self):
         super().reload()
@@ -1159,8 +1156,8 @@ class Replicator(CascadedWorker):
         if cf.has_option('deny_triggers_automatic_management'):
             self.deny_triggers_automatic_management = cf.getboolean('deny_triggers_automatic_management')
 
-        if self.deny_triggers_automatic_management and cf.has_option('create_deny_triggers'):
-            self.create_deny_triggers = cf.getboolean('create_deny_triggers')
+        if self.deny_triggers_automatic_management and cf.has_option('deny_triggers_only_mark_state'):
+            self.deny_triggers_only_mark_state = cf.getboolean('deny_triggers_only_mark_state')
 
         return cf
 
