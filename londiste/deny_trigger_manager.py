@@ -2,6 +2,7 @@
 import logging
 
 
+
 class DenyTriggerManager:
     """
     Manages deny triggers on leaf node. It adds or removes deny triggers from all subscribed tables - configuration is
@@ -26,20 +27,9 @@ class DenyTriggerManager:
         self.queue_name = queue_name
         self.dst_db = dst_db
 
-    def create_missing_deny_triggers_for_table(self, table_info, only_mark_state):
-        """
-        (Re)create deny filters for subscribed tables, but only those not yet applied or those that have changed.
-        """
-        source_table = table_info['table_name']
-        dest_table = table_info['dest_table']
-
-        self.log.debug("Creating triggers for table %s", source_table)
-        dst_db = self.dst_db
-        dst_curs = dst_db.cursor()
-
+    def get_triggers_for_type(self, event_filter, source_table, dest_table):
         triggers = {}
 
-        event_filter = self.event_filter_config.get(source_table, None)
         if event_filter and event_filter['partialSync']:
             # partial sync is enabled for a table, we have to apply filter
             self.log.debug("Partial sync enabled for %s", source_table)
@@ -88,16 +78,46 @@ execute procedure pgq.logutriga('{0}', 'deny')""".format(self.queue_name, dest_t
     on {1}
 execute procedure pgq.sqltriga('{0}', 'deny')""".format(self.queue_name, dest_table)
 
+        return triggers
+
+    def create_missing_deny_triggers_for_table(self, table_info, only_mark_state):
+        """
+        (Re)create deny filters for subscribed tables, but only those not yet applied or those that have changed.
+        """
+        source_table = table_info['table_name']
+        dest_table = table_info['dest_table']
+        trigger_info = table_info['trigger_info']
+
+        self.log.debug("Creating triggers for table %s", source_table)
+        dst_db = self.dst_db
+        dst_curs = dst_db.cursor()
+
+        event_filter = self.event_filter_config.get(source_table, None)
+        triggers = self.get_triggers_for_type(event_filter, source_table, dest_table)
+
+        if trigger_info is not None:
+            # some triggers may not be relevant any more (partialSync added or removed since last time) -> remove old triggers
+            types_to_drop = trigger_info.keys() - triggers.keys()
+            for type in types_to_drop:
+                q = self.type_to_drop_query_dict[type].format(self.queue_name, dest_table)
+                self.log.debug("Dropping original trigger not used any more: %s", q)
+                dst_curs.execute(q)
+                dst_curs.execute("""
+                    delete from londiste.deny_trigger_info
+                    where table_name = %(table_name)s
+                        and queue_name = %(queue_name)s
+                        and trigger_type = %(type)s;
+                """, {'table_name': dest_table, 'queue_name': self.queue_name, 'type': type})
+
         for type, definition in triggers.items():
-            trigger_info = table_info['trigger_info']
             current_definition = trigger_info.get(type) if trigger_info is not None else None
             if current_definition != definition:
-                if current_definition is not None and not only_mark_state:
-                    q = self.type_to_drop_query_dict[type].format(self.queue_name, dest_table)
-                    self.log.debug("Dropping original trigger: %s", q)
-                    dst_curs.execute(q)
-                self.log.debug("Creating new trigger: %s", definition)
                 if not only_mark_state:
+                    if current_definition is not None:
+                        q = self.type_to_drop_query_dict[type].format(self.queue_name, dest_table)
+                        self.log.debug("Dropping original trigger: %s", q)
+                        dst_curs.execute(q)
+                    self.log.debug("Creating new trigger: %s", definition)
                     dst_curs.execute(definition)
                 dst_curs.execute("""
                     delete from londiste.deny_trigger_info

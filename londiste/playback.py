@@ -382,7 +382,7 @@ class Replicator(CascadedWorker):
         self.replica_mode_enabled = True
         # whether deny filters should be managed automatically
         self.deny_triggers_automatic_management = False
-        # if true, triggers are not recreated, the current state of triggers is saved in database, useful for initial run.
+        # if true, deny triggers are not recreated, the current state of triggers is only saved in database, useful for initial run.
         # relevant only when deny_triggers_automatic_management = True
         self.deny_triggers_only_mark_state = False
 
