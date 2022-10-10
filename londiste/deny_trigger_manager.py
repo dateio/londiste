@@ -161,7 +161,7 @@ execute procedure pgq.sqltriga('{0}', 'deny')""".format(self.queue_name, dest_ta
             trigger_info[row['trigger_type']] = row['trigger_definition']
             table_trigger_infos[table_name] = trigger_info
         table_infos = [
-            {**table_info, 'trigger_info': (table_trigger_infos.get(table_info['table_name']))}
+            {**table_info, 'trigger_info': (table_trigger_infos.get(table_info['dest_table']))}
             for table_info in table_infos
         ]
 
