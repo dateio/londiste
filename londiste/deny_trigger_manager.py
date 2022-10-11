@@ -27,16 +27,13 @@ class DenyTriggerManager:
         self.queue_name = queue_name
         self.dst_db = dst_db
 
-    def get_triggers_for_type(self, event_filter, source_table, dest_table):
+    def get_triggers_for_type(self, filter_condition, source_table, dest_table):
         triggers = {}
 
-        if event_filter and event_filter['partialSync']:
+        if filter_condition:
             # partial sync is enabled for a table, we have to apply filter
             self.log.debug("Partial sync enabled for %s", source_table)
 
-            # we have to take condition for master, because for slave it is in Python format. Condition should have
-            # the same result on master and on slave
-            filter_condition = event_filter['partialConditionMaster']
             filter_condition_old = filter_condition.replace('_tbl', 'old')
             filter_condition_new = filter_condition.replace('_tbl', 'new')
 
@@ -88,19 +85,27 @@ execute procedure pgq.sqltriga('{0}', 'deny')""".format(self.queue_name, dest_ta
         dest_table = table_info['dest_table']
         trigger_info = table_info['trigger_info']
 
-        self.log.debug("Creating triggers for table %s", source_table)
         dst_db = self.dst_db
         dst_curs = dst_db.cursor()
 
         event_filter = self.event_filter_config.get(source_table, None)
-        triggers = self.get_triggers_for_type(event_filter, source_table, dest_table)
+        # we have to take condition for master, because for slave it is in Python format. Condition should have
+        # the same result on master and on slave
+        filter_condition = event_filter['partialConditionMaster'] if event_filter and event_filter['partialSync'] else None
+
+        msg = "Creating triggers for table {0}".format(source_table)
+        if filter_condition:
+            msg = msg + ", filter condition {0}".format(filter_condition)
+        self.log.info(msg)
+
+        triggers = self.get_triggers_for_type(filter_condition, source_table, dest_table)
 
         if trigger_info is not None:
             # some triggers may not be relevant any more (partialSync added or removed since last time) -> remove old triggers
             types_to_drop = trigger_info.keys() - triggers.keys()
             for type in types_to_drop:
                 q = self.type_to_drop_query_dict[type].format(self.queue_name, dest_table)
-                self.log.debug("Dropping original trigger not used any more: %s", q)
+                self.log.info("Dropping original trigger not used any more: %s", q)
                 dst_curs.execute(q)
                 dst_curs.execute("""
                     delete from londiste.deny_trigger_info
@@ -115,9 +120,9 @@ execute procedure pgq.sqltriga('{0}', 'deny')""".format(self.queue_name, dest_ta
                 if not only_mark_state:
                     if current_definition is not None:
                         q = self.type_to_drop_query_dict[type].format(self.queue_name, dest_table)
-                        self.log.debug("Dropping original trigger: %s", q)
+                        self.log.info("Dropping original trigger: %s", q)
                         dst_curs.execute(q)
-                    self.log.debug("Creating new trigger: %s", definition)
+                    self.log.info("Creating new trigger: %s", definition)
                     dst_curs.execute(definition)
                 dst_curs.execute("""
                     delete from londiste.deny_trigger_info
