@@ -61,6 +61,8 @@ class LondisteSetup(CascadeAdmin):
         self.register_skip_tables = self.cf.getlist("register_skip_tables", [])
         self.register_skip_seqs = self.cf.getlist("register_skip_seqs", [])
 
+        self.deny_triggers_automatic_management = self.cf.getboolean('deny_triggers_automatic_management')
+
         load_handler_modules(self.cf)
 
     def init_optparse(self, parser=None):
@@ -216,6 +218,9 @@ class LondisteSetup(CascadeAdmin):
         if self.options.dest_table and len(args) > 1:
             self.log.error("--dest-table can be given only for single table")
             sys.exit(1)
+
+        if self.deny_triggers_automatic_management:
+            self.options.no_triggers = True
 
         # seems ok
         for tbl in args:
