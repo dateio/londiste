@@ -61,7 +61,7 @@ class LondisteSetup(CascadeAdmin):
         self.register_skip_tables = self.cf.getlist("register_skip_tables", [])
         self.register_skip_seqs = self.cf.getlist("register_skip_seqs", [])
 
-        self.deny_triggers_automatic_management = self.cf.getboolean('deny_triggers_automatic_management')
+        self.deny_triggers_automatic_management = self.cf.getboolean('deny_triggers_automatic_management', False)
 
         load_handler_modules(self.cf)
 
