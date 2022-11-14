@@ -566,7 +566,7 @@ class LondisteSetup(CascadeAdmin):
             for row in rows:
                 print(row['table_name'])
         else:
-            q = """select table_name, merge_state, table_attrs
+            q = """select table_name, coalesce(dest_table, '') as dest_table, merge_state, table_attrs
             from londiste.get_table_list(%s) where local
             order by table_name"""
             self.display_table(db, "Tables on node", q, [self.set_name],
