@@ -166,8 +166,6 @@ class CopyTable(Replicator):
             else:
                 self.log.info("%s: truncating", tbl_stat.name)
                 q = "truncate "
-                if dst_db.server_version >= 80400:
-                    q += "only "
                 q += skytools.quote_fqident(tbl_stat.dest_table)
                 dst_curs.execute(q)
 
