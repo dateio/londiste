@@ -261,7 +261,7 @@ class Repairer(Syncer):
             self.addeq(set_list, skytools.quote_ident(f), unescape(v1))
             self.addcmp(whe_list, skytools.quote_ident(f), unescape(v2))
 
-        q = "update only %s set %s where %s;" % (
+        q = "update %s set %s where %s;" % (
             tbl, ", ".join(set_list), " and ".join(whe_list))
         self.show_fix(tbl, q, 'update')
 
@@ -271,7 +271,7 @@ class Repairer(Syncer):
         whe_list = []
         for f in self.pkey_list:
             self.addcmp(whe_list, skytools.quote_ident(f), unescape(dst_row[f]))
-        q = "delete from only %s where %s;" % (skytools.quote_fqident(tbl), " and ".join(whe_list))
+        q = "delete from %s where %s;" % (skytools.quote_fqident(tbl), " and ".join(whe_list))
         self.show_fix(tbl, q, 'delete')
 
     def show_fix(self, tbl, q, desc):

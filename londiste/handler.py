@@ -232,8 +232,8 @@ class TableHandler(BaseHandler):
 
     sql_command = {
         'I': "insert into %s %s;",
-        'U': "update only %s set %s;",
-        'D': "delete from only %s where %s;",
+        'U': "update %s set %s;",
+        'D': "delete from %s where %s;",
     }
 
     allow_sql_event = 1

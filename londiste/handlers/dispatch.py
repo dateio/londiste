@@ -358,11 +358,11 @@ class BaseBulkTempLoader(BaseBulkCollectingLoader):
         eqlist = [tmpl % (c, c) for c in qcols]
         _set = ", ".join(eqlist)
 
-        sql = "update only %s set %s from %s as t where %s" % (self.qtable, _set, self.qtemp, self._where())
+        sql = "update %s set %s from %s as t where %s" % (self.qtable, _set, self.qtemp, self._where())
         self.logexec(curs, sql)
 
     def delete(self, curs):
-        sql = "delete from only %s using %s as t where %s" % (self.qtable, self.qtemp, self._where())
+        sql = "delete from %s using %s as t where %s" % (self.qtable, self.qtemp, self._where())
         self.logexec(curs, sql)
 
     def truncate(self, curs):

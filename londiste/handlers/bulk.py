@@ -218,7 +218,7 @@ class BulkLoader(BaseHandler):
         whe_expr = " and ".join(klist)
 
         # create del sql
-        del_sql = "delete from only %s using %s where %s" % (qtbl, qtemp, whe_expr)
+        del_sql = "delete from %s using %s where %s" % (qtbl, qtemp, whe_expr)
 
         # create update sql
         slist = []
@@ -226,7 +226,7 @@ class BulkLoader(BaseHandler):
             if col not in key_fields:
                 exp = "%s = %s.%s" % (quote_ident(col), qtemp, quote_ident(col))
                 slist.append(exp)
-        upd_sql = "update only %s set %s from %s where %s" % (qtbl, ", ".join(slist), qtemp, whe_expr)
+        upd_sql = "update %s set %s from %s where %s" % (qtbl, ", ".join(slist), qtemp, whe_expr)
 
         # avoid updates on pk-only table
         if not slist:
