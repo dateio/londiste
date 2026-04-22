@@ -1,9 +1,7 @@
 import logging
 import urllib
-import ssl
-import requests
+import httpx
 from datetime import datetime
-from requests_toolbelt.multipart.encoder import MultipartEncoder
 
 __all__ = ['Rest']
 
@@ -31,10 +29,13 @@ class Rest:
         if self.rest_url:
             with open(file_name, 'rb') as file:
                 url = self.rest_url + action
-                payload = MultipartEncoder(fields={'file': ('file', file, 'text/plain')})
                 if params:
                     url = url + '?' + urllib.parse.urlencode(params)
-                response = requests.post(url, data=payload, headers={'Content-Type': payload.content_type}, verify=False)
+                timeout = self.config.getint('rest_timeout', 1200)
+                self.log.debug('REST call starting: POST %s, file=%s', url, file_name)
+                with httpx.Client(verify=False, timeout=timeout) as client:
+                    response = client.post(url, files={'file': ('file', file, 'text/plain')})
+                self.log.debug('REST call completed: POST %s, status=%s', url, response.status_code)
                 self.log.info('Sent data to %s, result: %s', self.rest_url, response.status_code)
                 response.raise_for_status()
                 content_type = response.headers.get('Content-type')
