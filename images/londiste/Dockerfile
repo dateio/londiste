@@ -9,7 +9,7 @@ FROM python:3.8-slim-bookworm
 WORKDIR /code
 ENV REPOS="repos"
 
-RUN pip3 install 'psycopg2-binary==2.8.6' 'pyyaml==5.3.1' 'pgq==3.5' 'skytools==3.7.3' 'pyaml==21.8.3' 'httpx'
+RUN pip3 install 'psycopg2-binary==2.8.6' 'pyyaml==5.3.1' 'pgq==3.5' 'skytools==3.7.3' 'pyaml==21.8.3' 'httpx==0.28.1'
 
 RUN set -ex; \
     apt="apt-get -qq -y --no-install-recommends"; \
