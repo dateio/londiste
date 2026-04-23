@@ -31,9 +31,8 @@ class Rest:
                 url = self.rest_url + action
                 if params:
                     url = url + '?' + urllib.parse.urlencode(params)
-                timeout = self.config.getint('rest_timeout', 1200)
                 self.log.debug('REST call starting: POST %s, file=%s', url, file_name)
-                with httpx.Client(verify=False, timeout=timeout) as client:
+                with httpx.Client(verify=False, timeout=None) as client:
                     response = client.post(url, files={'file': ('file', file, 'text/plain')})
                 self.log.debug('REST call completed: POST %s, status=%s', url, response.status_code)
                 self.log.info('Sent data to %s, result: %s', self.rest_url, response.status_code)
