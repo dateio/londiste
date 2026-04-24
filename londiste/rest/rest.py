@@ -32,8 +32,9 @@ class Rest:
                 if params:
                     url = url + '?' + urllib.parse.urlencode(params)
                 self.log.debug('REST call starting: POST %s, file=%s', url, file_name)
+                headers = {'Connection': 'close'}
                 with httpx.Client(verify=False, timeout=None) as client:
-                    response = client.post(url, files={'file': ('file', file, 'text/plain')})
+                    response = client.post(url, files={'file': ('file', file, 'text/plain')}, headers=headers)
                 self.log.debug('REST call completed: POST %s, status=%s', url, response.status_code)
                 self.log.info('Sent data to %s, result: %s', self.rest_url, response.status_code)
                 response.raise_for_status()
